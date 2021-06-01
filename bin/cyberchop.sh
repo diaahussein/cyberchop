@@ -105,11 +105,11 @@ function enable_protection() {
 	verbose_print "run_as_root arptables -A INPUT -s ${gw-} --source-mac ${a[2]} -j ACCEPT" "$fg_green"
 	verbose_print "run_as_root arptables -A OUTPUT -s ${gw-} --destination-mac ${a[2]} -j ACCEPT" "$fg_green"
 
-	run_as_root arptables -F
-	run_as_root arptables -P INPUT DROP
-	run_as_root arptables -P OUTPUT DROP
-	run_as_root arptables -A INPUT -s "${gw-}" --source-mac "${a[2]}" -j ACCEPT
-	run_as_root arptables -A OUTPUT -d "${gw-}" --destination-mac "${a[2]}" -j ACCEPT
+#	run_as_root arptables -F
+#	run_as_root arptables -P INPUT DROP
+#	run_as_root arptables -P OUTPUT DROP
+#	run_as_root arptables -A INPUT -s "${gw-}" --source-mac "${a[2]}" -j ACCEPT
+#	run_as_root arptables -A OUTPUT -d "${gw-}" --destination-mac "${a[2]}" -j ACCEPT
 }
 
 function disable_protection() {
@@ -145,13 +145,17 @@ function netresume_single_host() {
 	local a
 	# shellcheck disable=SC2001
 	a=($(echo "$machine_data" | sed 's/|/\n/g'))
-
+        pidnum=($(echo "$machine_data" | sed 's/|/\n/g'|sed -n 4p))
+        pidlength=6
+        if [ "${#pidnum}" -lt "$pidlength" ]
+        then
 	verbose_print "run_as_root kill -9 $(pstree "${a[2]}" -p -a -l | cut -d, -f2 | cut -d' ' -f1 | xargs)" "$fg_green"
 	verbose_print "run_as_root kill -9 $(pstree "${a[3]}" -p -a -l | cut -d, -f2 | cut -d' ' -f1 | xargs)" "$fg_green"
 
 	run_as_root kill -9 "$(pstree "${a[2]}" -p -a -l | cut -d, -f2 | cut -d' ' -f1 | xargs)" #arpspoof_pid
 	run_as_root kill -9 "$(pstree "${a[3]}" -p -a -l | cut -d, -f2 | cut -d' ' -f1 | xargs)" #tcpkill_pid
 	update_pid_machine_list null null "$victim" 0
+	fi
 }
 
 function netresumeall() {
@@ -179,8 +183,8 @@ function default_gw() {
 	do
 		#'none default via 30.147.0.1 dev wifi0 proto unspec metric 0'
 		if [[ $line == *"default"* ]]; then
-			gw=$(echo "$line" | grep -E -o '([0-9]{1,3}\.){3}[0-9]{1,3}')
-			iface=$(echo "$line" | grep -E -o '(eth|wifi)[0-9]')
+			gw=$(echo "$line" | grep -E -o '([0-9]{1,3}\.){3}[0-9]{1,3}' |sed 1q)
+			iface=$(echo "$line" | grep -E -o '(eth|wlan|wifi)[0-9]')
 			myip=$(hostname -I)
 		fi
 	done < <(ip route list)
